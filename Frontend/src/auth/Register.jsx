@@ -25,35 +25,89 @@ const Register = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
+  const validateForm = () => {
     const { username, email, password, confirmPassword } = formData;
     
+    if (!username.trim()) {
+      toast.error('Please enter a username');
+      return false;
+    }
+    
+    if (username.trim().length < 3) {
+      toast.error('Username must be at least 3 characters long');
+      return false;
+    }
+    
+    if (!email.trim()) {
+      toast.error('Please enter your email address');
+      return false;
+    }
+    
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+    
+    if (!password) {
+      toast.error('Please enter a password');
+      return false;
+    }
+    
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return false;
+    }
+    
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
       toast.error('Passwords do not match');
-      setLoading(false);
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
     
-    const result = await register({
-      username,
-      email,
-      password
-    });
+    setLoading(true);
+    setError('');
     
-    if (result.success) {
-      // toast.success('Registered successfully! Please login.');
-      navigate('/login');
-    } else {
-      setError(result.error);
-      toast.error(result.error);
+    const { username, email, password } = formData;
+    
+    try {
+      const result = await register({
+        username,
+        email,
+        password
+      });
+      
+      if (result.success) {
+        toast.success('Registration successful! Please log in.', {
+          icon: '🎉',
+          position: 'top-center'
+        });
+        
+        setTimeout(() => {
+          navigate('/login');
+        }, 1000);
+      } else {
+        setError(result.error);
+        toast.error(result.error || 'Registration failed, please try again');
+      }
+    } catch (err) {
+      console.error('Registration error:', err);
+      const errorMessage = err.message || 'An unexpected error occurred';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (

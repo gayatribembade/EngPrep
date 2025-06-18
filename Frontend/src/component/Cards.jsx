@@ -98,35 +98,35 @@ const Cards = () => {
       title: "Latest Books",
       description: "Most recently added textbooks and learning materials",
       image: "https://wallpapercave.com/wp/wp2036967.jpg",
-      color: "from-blue-600 to-cyan-400"
+      color: "from-blue-400 to-cyan-300"
     },
     {
       icon: FileText,
       title: "Past Year Papers (PYQs)",
       description: "Previous exam papers organized by subject and year",
       image: "http://sev.h-cdn.co/assets/15/20/1280x960/gallery-1431381741-tumblr-nmcftajjos1uqg4zmo1-1280.jpg",
-      color: "from-purple-600 to-pink-500"
+      color: "from-purple-400 to-pink-300"
     },
     {
       icon: Notebook,
       title: "Notes & Study Material",
       description: "High-quality notes contributed by top students",
       image: "https://images.pexels.com/photos/1925536/pexels-photo-1925536.jpeg",
-      color: "from-amber-500 to-yellow-400"
+      color: "from-amber-400 to-yellow-300"
     }
   ];
 
   return (
     <div 
       id="feature-cards" 
-      className="px-6 py-24 bg-gradient-to-b from-blue-900/80 to-black"
+      className="px-6 py-24 bg-gradient-to-b from-white to-gray-100"
     >
       <div className="container mx-auto">
         {/* Section heading */}
         <div className={`text-center mb-16 transform transition-all duration-1000 ${inView ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Everything You Need to Succeed</h2>
-          <div className="w-20 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 mx-auto"></div>
-          <p className="text-gray-300 mt-6 max-w-2xl mx-auto">Access our comprehensive collection of academic resources designed to help you excel in your studies.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Everything You Need to Succeed</h2>
+          <div className="w-20 h-1 bg-gradient-to-r from-blue-400 to-cyan-300 mx-auto"></div>
+          <p className="text-gray-600 mt-6 max-w-2xl mx-auto">Access our comprehensive collection of academic resources designed to help you excel in your studies.</p>
         </div>
         
         {/* Cards grid */}
@@ -134,7 +134,7 @@ const Cards = () => {
           {cardsData.map((card, index) => (
             <div 
               key={index} 
-              className={`bg-gray-900/50 backdrop-blur-sm rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transform transition-all duration-700 delay-${index * 100} hover:-translate-y-2 ${
+              className={`bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transform transition-all duration-700 delay-${index * 100} hover:-translate-y-2 ${
                 inView ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
               }`}
             >
@@ -145,7 +145,7 @@ const Cards = () => {
                   alt={card.title} 
                   className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-700"
                 />
-                <div className={`absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-90`}></div>
+                <div className={`absolute inset-0 bg-gradient-to-t from-white/80 to-transparent opacity-80`}></div>
                 
                 {/* Icon overlay */}
                 <div className={`absolute top-4 right-4 p-3 rounded-lg bg-gradient-to-br ${card.color} shadow-lg`}>
@@ -158,10 +158,10 @@ const Cards = () => {
                 <h3 className={`text-2xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r ${card.color}`}>
                   {card.title}
                 </h3>
-                <p className="text-gray-300">{card.description}</p>
+                <p className="text-gray-600">{card.description}</p>
                 
                 {/* Interactive button */}
-                <button className={`mt-6 py-2 px-4 rounded-lg bg-gray-800 hover:bg-gradient-to-r ${card.color} text-white text-sm flex items-center gap-2 transition-all duration-300`}>
+                <button className={`mt-6 py-2 px-4 rounded-lg bg-white border border-gray-200 hover:bg-gradient-to-r ${card.color} hover:text-white text-gray-700 text-sm flex items-center gap-2 transition-all duration-300`}>
                   Explore Resources
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

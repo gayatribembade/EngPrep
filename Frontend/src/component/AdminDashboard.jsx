@@ -1,197 +1,298 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../auth/auth-provider';
+import { storage, auth } from '../firebase/firebase-config';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Upload, FileText, Check, AlertCircle } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const [submissions, setSubmissions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [error, setError] = useState(null);
-  const [socket, setSocket] = useState(null);
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
-  
-  // Fetch all pending submissions
-  const fetchSubmissions = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('/api/submissions/pending');
-      setSubmissions(response.data.submissions);
+  const [uploadType, setUploadType] = useState(null);
+  const [metadata, setMetadata] = useState({
+    title: '',
+    description: '',
+    branch: '',
+    year: '',
+    semester: '',
+    subject: ''
+  });
+
+  const branches = [
+    "Chemical Engineering",
+    "Civil Engineering",
+    "Computer Science & Engineering",
+    "Electronics & Telecommunication Engineering",
+    "Electronics Engineering",
+    "Electrical Engineering",
+    "Information Technology",
+    "Mechanical Engineering",
+    "Production Engineering",
+    "Textile Engineering"
+  ];
+
+  const years = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+  const semesters = ["Semester 1", "Semester 2", "Semester 3", "Semester 4", "Semester 5", "Semester 6", "Semester 7", "Semester 8"];
+
+  const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      setFile(e.target.files[0]);
       setError(null);
-    } catch (error) {
-      console.error('Error fetching submissions:', error);
-      setError('Failed to load submissions. Please try again.');
-    } finally {
-      setLoading(false);
+      setUploadSuccess(false);
     }
   };
-  
-  // Handle WebSocket connection for real-time notifications
-  useEffect(() => {
-    // Create WebSocket connection
-    const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001');
-    
-    ws.onopen = () => {
-      console.log('WebSocket connection established');
-    };
-    
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'new_submission') {
-        // Fetch the latest submissions when a new one is received
-        fetchSubmissions();
+
+  const handleMetadataChange = (e) => {
+    setMetadata({
+      ...metadata,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setError('Please select a file first');
+      return;
+    }
+
+    if (!uploadType) {
+      setError('Please select upload type');
+      return;
+    }
+
+    if (!metadata.title || !metadata.description || !metadata.branch || !metadata.year || !metadata.semester) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError(null);
+
+      // Get the current user's token
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('No authentication token available');
       }
-    };
-    
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
-    
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
-    
-    setSocket(ws);
-    
-    // Clean up the WebSocket connection
-    return () => {
-      ws.close();
-    };
-  }, []);
-  
-  // Initial fetch of submissions
-  useEffect(() => {
-    fetchSubmissions();
-  }, []);
-  
-  // Handle submission approval
-  const handleApprove = async (submissionId) => {
-    try {
-      await axios.post(`/api/submissions/approve/${submissionId}`);
-      // Remove the approved submission from the list
-      setSubmissions(submissions.filter(sub => sub._id !== submissionId));
-      setSelectedSubmission(null);
+
+      // Create a reference with a unique file name
+      const safePath = encodeURIComponent(`resources/${uploadType}/${metadata.branch}/${metadata.year}/${metadata.semester}/${file.name}`);
+      const fileRef = ref(storage, safePath);
+
+      // Add custom metadata
+      const customMetadata = {
+        customMetadata: {
+          title: metadata.title,
+          description: metadata.description,
+          branch: metadata.branch,
+          year: metadata.year,
+          semester: metadata.semester,
+          subject: metadata.subject || '',
+          uploadedBy: user.email,
+          uploadedAt: new Date().toISOString()
+        }
+      };
+
+      // Upload the file with metadata
+      await uploadBytes(fileRef, file, customMetadata);
+      const downloadURL = await getDownloadURL(fileRef);
+
+      setUploadSuccess(true);
+      setFile(null);
+      setMetadata({
+        title: '',
+        description: '',
+        branch: '',
+        year: '',
+        semester: '',
+        subject: ''
+      });
+      setUploadType(null);
     } catch (error) {
-      console.error('Error approving submission:', error);
-      setError('Failed to approve submission. Please try again.');
+      console.error('Upload error:', error);
+      setError('Failed to upload file. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
-  
-  // Handle submission rejection
-  const handleReject = async (submissionId) => {
-    const reason = prompt('Please enter a reason for rejection (optional):');
-    try {
-      await axios.post(`/api/submissions/reject/${submissionId}`, { reason });
-      // Remove the rejected submission from the list
-      setSubmissions(submissions.filter(sub => sub._id !== submissionId));
-      setSelectedSubmission(null);
-    } catch (error) {
-      console.error('Error rejecting submission:', error);
-      setError('Failed to reject submission. Please try again.');
-    }
-  };
-  
-  // View submission details
-  const handleViewDetails = (submission) => {
-    setSelectedSubmission(submission);
-  };
-  
+
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-          {error}
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="mt-2 text-gray-600">Welcome back, {user?.username}</p>
         </div>
-      )}
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Submissions List */}
-        <div className="md:col-span-1 bg-white p-4 rounded-lg shadow">
-          <h2 className="text-xl font-bold mb-4">Pending Submissions ({submissions.length})</h2>
-          
-          {loading ? (
-            <p>Loading submissions...</p>
-          ) : submissions.length === 0 ? (
-            <p>No pending submissions</p>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {submissions.map((submission) => (
-                <li key={submission._id} className="py-3">
-                  <div 
-                    className="cursor-pointer hover:bg-gray-50 p-2 rounded" 
-                    onClick={() => handleViewDetails(submission)}
-                  >
-                    <h3 className="font-medium">{submission.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      {submission.category} • By {submission.authorName}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(submission.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        
-        {/* Submission Details */}
-        <div className="md:col-span-2 bg-white p-4 rounded-lg shadow">
-          {selectedSubmission ? (
+
+        <div className="bg-white shadow rounded-lg p-6 space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            {/* Upload Type Selection */}
             <div>
-              <h2 className="text-2xl font-bold mb-2">{selectedSubmission.title}</h2>
-              <div className="flex gap-2 mb-4">
-                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                  {selectedSubmission.category}
-                </span>
-                {selectedSubmission.tags.map((tag, index) => (
-                  <span key={index} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
-                    {tag}
-                  </span>
+              <label className="block text-sm font-medium text-gray-700 mb-4">Select Upload Type</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {['Notes', 'Question Papers', 'Books'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setUploadType(type)}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      uploadType === type
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50'
+                    }`}
+                  >
+                    <FileText className="w-6 h-6 mx-auto mb-2" />
+                    {type}
+                  </button>
                 ))}
               </div>
-              
-              <div className="mb-4">
-                <h3 className="text-lg font-medium mb-1">Description</h3>
-                <p className="text-gray-700">{selectedSubmission.description}</p>
-              </div>
-              
-              <div className="mb-4">
-                <h3 className="text-lg font-medium mb-1">File</h3>
-                <a 
-                  href={selectedSubmission.fileUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:underline"
-                >
-                  Preview File
-                </a>
-              </div>
-              
-              <div className="mb-4">
-                <h3 className="text-lg font-medium mb-1">Author Information</h3>
-                <p className="text-gray-700">
-                  {selectedSubmission.authorName} ({selectedSubmission.authorEmail})
-                </p>
-              </div>
-              
-              <div className="flex gap-2 mt-6">
-                <button
-                  onClick={() => handleApprove(selectedSubmission._id)}
-                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-                >
-                  Approve Submission
-                </button>
-                <button
-                  onClick={() => handleReject(selectedSubmission._id)}
-                  className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-                >
-                  Reject Submission
-                </button>
-              </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-gray-500">
-              Select a submission to view details
+
+            {uploadType && (
+              <>
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Upload File</label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+                    <div className="space-y-1 text-center">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="flex text-sm text-gray-600">
+                        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                          <span>Upload a file</span>
+                          <input
+                            id="file-upload"
+                            name="file-upload"
+                            type="file"
+                            className="sr-only"
+                            onChange={handleFileChange}
+                          />
+                        </label>
+                        <p className="pl-1">or drag and drop</p>
+                      </div>
+                      <p className="text-xs text-gray-500">PDF, DOC up to 10MB</p>
+                    </div>
+                  </div>
+                  {file && (
+                    <p className="mt-2 text-sm text-gray-600">
+                      Selected file: {file.name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Metadata Form */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Title</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={metadata.title}
+                      onChange={handleMetadataChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                      name="description"
+                      value={metadata.description}
+                      onChange={handleMetadataChange}
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Branch</label>
+                      <select
+                        name="branch"
+                        value={metadata.branch}
+                        onChange={handleMetadataChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select Branch</option>
+                        {branches.map((branch) => (
+                          <option key={branch} value={branch}>{branch}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Year</label>
+                      <select
+                        name="year"
+                        value={metadata.year}
+                        onChange={handleMetadataChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select Year</option>
+                        {years.map((year) => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Semester</label>
+                      <select
+                        name="semester"
+                        value={metadata.semester}
+                        onChange={handleMetadataChange}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Select Semester</option>
+                        {semesters.map((semester) => (
+                          <option key={semester} value={semester}>{semester}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Subject (Optional)</label>
+                    <input
+                      type="text"
+                      name="subject"
+                      value={metadata.subject}
+                      onChange={handleMetadataChange}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Upload Button */}
+                <div>
+                  <button
+                    onClick={handleUpload}
+                    disabled={!file || uploading}
+                    className={`w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-sm font-medium text-white ${
+                      !file || uploading
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {uploading ? 'Uploading...' : 'Upload File'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Status Messages */}
+          {error && (
+            <div className="flex items-center p-4 text-red-700 bg-red-50 rounded-lg">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              {error}
+            </div>
+          )}
+
+          {uploadSuccess && (
+            <div className="flex items-center p-4 text-green-700 bg-green-50 rounded-lg">
+              <Check className="w-5 h-5 mr-2" />
+              File uploaded successfully!
             </div>
           )}
         </div>

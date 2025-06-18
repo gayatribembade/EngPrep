@@ -1,7 +1,6 @@
-// models/User.js
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const UserSchema = new mongoose.Schema({
   username: {
@@ -32,6 +31,10 @@ const UserSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  bookmarks: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Resource'
+  }],
   createdAt: {
     type: Date,
     default: Date.now
@@ -61,4 +64,5 @@ UserSchema.methods.getSignedJwtToken = function() {
   });
 };
 
-module.exports = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', UserSchema);
+export default User; 
