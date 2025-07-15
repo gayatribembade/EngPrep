@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // MongoDB Atlas Connection String
-const MONGODB_URI = "mongodb+srv://gayatribembade:gayatribembade%4015@cluster0.u9c2y7p.mongodb.net/EngPrep?retryWrites=true&w=majority";
+const MONGODB_URI = "";
 
 // Sample users
 const users = [

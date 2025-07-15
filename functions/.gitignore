@@ -1,2 +1,21 @@
 node_modules/
 *.local
+package-lock.json
+
+# Environment
+.env
+.env.local
+
+# Seed files (never commit these)
+seedData.js
+seedResource.js
+
+# Firebase files to ignore
+firebase-debug.log
+firebase-config.js
+.firebase/
+firebaserc
+firebase.json
+firestore.indexes.json
+firestore.rules
+storage.rules

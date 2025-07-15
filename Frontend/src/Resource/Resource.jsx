@@ -320,7 +320,7 @@ const Resource = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 " style={{ backgroundImage: "url('https://wallpapercave.com/wp/wp2036914.jpg')" }}>
+    <div className="flex min-h-screen bg-gray-100 pt-20" style={{ backgroundImage: "url('https://wallpapercave.com/wp/wp2036914.jpg')" }}>
       <aside className="w-1/4 bg-white p-4 border-r">
         <h2 className="text-xl font-bold mb-4">Subjects</h2>
         {loading ? (
